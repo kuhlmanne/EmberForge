@@ -39,6 +39,35 @@ body[data-mode="forge"] #panel-all { display: none !important; }
 body[data-mode="forge"] #sidebar { display: none !important; }
 body[data-mode="forge"] .camp-actions { display: none !important; }
 body[data-mode="forge"] .hud-actions { display: none !important; }
+/* Forge-mode Begin Session button floats inside the camp scene */
+.forge-begin-session {
+  display: none;
+  margin: 18px auto 0;
+  padding: 10px 28px;
+  font-family: 'Cinzel', serif;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  background: rgba(212, 165, 84, 0.12);
+  border: 1px solid rgba(212, 165, 84, 0.45);
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  animation: forge-btn-pulse 2.4s ease-in-out infinite;
+  transition: background 0.2s;
+}
+.forge-begin-session:hover {
+  background: rgba(212, 165, 84, 0.25);
+}
+@keyframes forge-btn-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(212, 165, 84, 0.2); }
+  50%      { box-shadow: 0 0 20px rgba(212, 165, 84, 0.5); }
+}
+body[data-mode="forge"] .forge-begin-session.visible { display: block; }
+@keyframes drag-guide-pulse {
+  0%, 100% { opacity: 0.7; text-shadow: 0 0 6px rgba(212, 165, 84, 0.3); }
+  50%      { opacity: 1;   text-shadow: 0 0 14px rgba(212, 165, 84, 0.6); }
+}
 body[data-mode="forge"] .input-row { display: none !important; }
 body[data-mode="forge"] header { justify-content: space-between; padding: 6px 18px; }
 body[data-mode="forge"] .logo { font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.15em; color: var(--gold); }
@@ -812,6 +841,26 @@ body {
 .reward-skip:hover {
   color: rgba(200, 180, 140, 0.8);
   border-color: rgba(200, 180, 140, 0.5);
+}
+/* Return to Camp button shown in session log after session ends */
+.return-to-camp-btn {
+  display: block;
+  margin: 20px auto 12px;
+  padding: 12px 36px;
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(212, 165, 84, 0.1);
+  border: 1px solid rgba(212, 165, 84, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.return-to-camp-btn:hover {
+  background: rgba(212, 165, 84, 0.22);
+  box-shadow: 0 0 14px rgba(212, 165, 84, 0.3);
 }
 
 /* Header */
@@ -2816,8 +2865,8 @@ main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 }
 .turn-order-slot {
   position: relative;
-  width: 36px;
-  height: 44px;
+  width: 52px;
+  height: 64px;
   border: 1px solid rgba(255, 200, 120, 0.35);
   outline: 1px solid rgba(0, 0, 0, 0.9);
   outline-offset: 1px;
@@ -2856,7 +2905,7 @@ main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
   align-items: center;
   justify-content: center;
   font-family: 'Georgia', serif;
-  font-size: 14px;
+  font-size: 18px;
   color: rgba(255, 220, 150, 0.85);
   font-weight: 600;
 }
@@ -2908,7 +2957,7 @@ main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
   align-items: center;
   justify-content: center;
   font-family: 'Georgia', serif;
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.2em;
   font-weight: 700;
   color: rgba(220, 180, 255, 0.85);
@@ -5012,6 +5061,7 @@ footer {
           <span class="count" id="count-camp">0</span>
         </div>
         <div class="scene-body" id="standees-camp"></div>
+        <button class="forge-begin-session" id="forge-begin-session" onclick="openSessionBegin()" title="Begin a session with your party">&#9879; Begin Session</button>
       </section>
 
       <!-- PARTY - active companions on the road, who comes with you -->
@@ -6140,6 +6190,14 @@ function renderCampTab() {
   // Keep the arc panel populated - even though it's offscreen for now,
   // The Keeper will read from it eventually.
   if (typeof renderArcPanel === 'function') renderArcPanel();
+
+  // Forge mode: show Begin Session button when at least 1 ember is in party
+  const forgeBtn = document.getElementById('forge-begin-session');
+  if (forgeBtn) {
+    const isForge = document.body.getAttribute('data-mode') === 'forge';
+    const hasParty = buckets.party.length > 0;
+    forgeBtn.classList.toggle('visible', isForge && hasParty);
+  }
 }
 
 function renderSceneStandees(personas, zoneName) {
@@ -6147,7 +6205,7 @@ function renderSceneStandees(personas, zoneName) {
     let msg;
     if (zoneName === 'void')       msg = 'The void is quiet.<br>No embers waiting to form.';
     else if (zoneName === 'camp')  msg = 'The hearth is cold.<br>No embers at rest.';
-    else                           msg = 'No embers on the road.<br><span style="color:var(--gold);font-size:12px">Drag your companion from Camp to here to begin.</span>';
+    else                           msg = 'No embers on the road.<br><span style="color:var(--gold);font-size:18px;font-family:\'Cinzel\',serif;letter-spacing:0.08em;animation:drag-guide-pulse 2s ease-in-out infinite;display:inline-block;margin-top:8px">Drag your companion from Camp to here to begin.</span>';
     return `<div class="scene-empty">${msg}</div>`;
   }
   return personas.map(p => renderStandee(p)).join('');
@@ -6410,7 +6468,7 @@ function renderAbilityChips(abilities) {
 
 function renderTabEquipment(p, sheet) {
   if (!sheet || !sheet.equipment) {
-    return `<div class="empty">No equipment forged for this persona.</div>`;
+    return `<div class="empty" style="text-align:center"><div>No equipment forged for this persona.</div><div style="margin-top:10px;font-size:12px;color:rgba(200,180,140,0.5);font-style:italic;letter-spacing:0.04em">Equipment unlocks as your party grows.</div></div>`;
   }
   const eq = sheet.equipment;
   const slots = ['head','main_hand','off_hand','chest','amulet','ring','legs','feet'];
@@ -7194,6 +7252,7 @@ function _appendForgedMemento(memento) {
       ${statsHtml}
       ${abilitiesHtml}
       <div class="memento-flavor"><em>${escHtml(memento.flavor_tag || '')}</em></div>
+      <div style="margin-top:12px;font-size:12px;color:rgba(200,180,140,0.7);font-style:italic;letter-spacing:0.04em">This memento carries a sidequest. Fulfill it in a future encounter to earn resonance.</div>
     </div>
   `;
   log.appendChild(div);
@@ -8091,7 +8150,8 @@ async function endSessionAndClose() {
     _sessionActive = false;
     _sessionPending = false;
     document.getElementById('session-submit-btn').disabled = false;
-    // Don't auto-close - let the player read the closing narration, then click X again.
+    // Show Return to Camp so the player can leave when ready
+    _showReturnToCampBtn();
   }
 }
 
@@ -9406,6 +9466,7 @@ async function pickRewardCard(cardId) {
       ms: 6000,
     });
     document.getElementById('reward-backdrop').classList.remove('active');
+    _showReturnToCampBtn();
     refreshCrystalCounter();
     if (typeof loadCampState === 'function') setTimeout(loadCampState, 300);
   } catch (e) {
@@ -9422,6 +9483,22 @@ async function skipRewardCards() {
     });
   } catch (e) {}
   document.getElementById('reward-backdrop').classList.remove('active');
+  _showReturnToCampBtn();
+}
+
+// Show a "Return to Camp" button at the bottom of the session log
+function _showReturnToCampBtn() {
+  const log = document.getElementById('session-log');
+  if (!log || log.querySelector('.return-to-camp-btn')) return;
+  const btn = document.createElement('button');
+  btn.className = 'return-to-camp-btn';
+  btn.textContent = '\u2302 Return to Camp';
+  btn.onclick = function() {
+    _closeSessionOverlay();
+    if (typeof loadCampState === 'function') loadCampState();
+  };
+  log.appendChild(btn);
+  log.scrollTop = log.scrollHeight;
 }
 
 // Escape closes reward picker
