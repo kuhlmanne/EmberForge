@@ -30,26 +30,16 @@
   --ink: #2a2435;
 }
 /* Forge-only mode: hide non-game tabs for standalone players */
-/* Forge mode: hide ALL studio chrome. No tabs. No header status.
-   The game IS the page. */
-body[data-mode="forge"] .tabs,
-body[data-mode="forge"] .status-row,
+body[data-mode="forge"] .tab-room,
+body[data-mode="forge"] .tab-claude,
+body[data-mode="forge"] .tab-all,
 body[data-mode="forge"] #panel-room,
 body[data-mode="forge"] #panel-claude,
-body[data-mode="forge"] #panel-all { display: none !important; }
-body[data-mode="forge"] header {
-  justify-content: center;
-  padding: 6px 18px;
-}
-body[data-mode="forge"] .logo {
-  font-family: 'Cinzel', serif;
-  font-size: 14px;
-  letter-spacing: 0.15em;
-  color: var(--gold);
-}
-/* In forge mode, Camp + Games panels are always visible as the full UI */
-body[data-mode="forge"] #panel-camp,
-body[data-mode="forge"] #panel-games { display: block; }
+body[data-mode="forge"] #panel-all,
+body[data-mode="forge"] #sh-dot,
+body[data-mode="forge"] #sh-lbl,
+body[data-mode="forge"] #cl-dot,
+body[data-mode="forge"] #cl-lbl { display: none !important; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -618,6 +608,41 @@ body {
   color: rgba(200, 180, 140, 0.4);
   margin-top: 6px;
   min-height: 14px;
+}
+
+/* ── Game-only settings panel ─────────────────────────────────────────── */
+.game-settings-backdrop {
+  position: fixed; inset: 0; z-index: 9996;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+}
+.game-settings-backdrop.active { display: flex; }
+.game-settings-panel {
+  width: 420px; max-height: 85vh; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(18,14,24,0.98), rgba(10,8,16,0.99));
+  border: 1px solid rgba(212,165,84,0.3); border-radius: 8px;
+  padding: 28px;
+}
+.gs-group { margin-bottom: 20px; }
+.gs-title {
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(212,165,84,0.6); margin-bottom: 12px;
+  border-bottom: 1px solid rgba(212,165,84,0.15); padding-bottom: 6px;
+}
+.gs-field { margin-bottom: 10px; }
+.gs-field label {
+  display: block; font-size: 12px; color: rgba(200,180,140,0.6);
+  margin-bottom: 4px;
+}
+.gs-field select, .gs-field input {
+  width: 100%; padding: 8px 10px; font-size: 13px;
+  background: rgba(20,16,28,0.8); border: 1px solid rgba(212,165,84,0.2);
+  color: var(--parchment); border-radius: 3px; outline: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+.gs-field select:focus, .gs-field input:focus {
+  border-color: var(--gold);
 }
 
 /* ── Crystal counter (camp header) ─────────────────────────────────────── */
@@ -4827,7 +4852,8 @@ footer {
       <!-- Injected by _renderMenuSlots() -->
     </div>
     <div class="menu-actions">
-      <button class="menu-btn settings-btn" onclick="closeMainMenu();openSettings()">Settings</button>
+      <button class="menu-btn settings-btn" onclick="openGameSettings()">Settings</button>
+      <button class="menu-btn" onclick="closeMainMenu();switchTab('games')">About</button>
     </div>
   </div>
 </div>
@@ -5066,6 +5092,94 @@ footer {
         Hold to speak
       </button>
       <div class="voice-chat-status" id="voice-chat-status"></div>
+    </div>
+  </div>
+
+  <!-- Game-only settings (separate from studio settings) -->
+  <div class="game-settings-backdrop" id="game-settings-backdrop" onclick="if(event.target===this)closeGameSettings()">
+    <div class="game-settings-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <div style="font-family:'Cinzel',serif;font-size:18px;color:var(--gold-light);letter-spacing:0.1em">Settings</div>
+        <button onclick="closeGameSettings()" style="background:none;border:none;color:var(--gold);font-size:20px;cursor:pointer">&times;</button>
+      </div>
+
+      <div class="gs-group">
+        <div class="gs-title">AI Provider</div>
+        <div class="gs-field">
+          <label>Provider</label>
+          <select id="gs-provider" onchange="_gsApplyPreset(this.value)">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT-4o)</option>
+            <option value="ollama">Ollama (local, free)</option>
+            <option value="together">Together AI</option>
+          </select>
+        </div>
+        <div class="gs-field">
+          <label>API Key</label>
+          <input type="password" id="gs-api-key" placeholder="sk-ant-..." onchange="_gsSave()">
+        </div>
+        <div class="gs-field">
+          <label>Keeper Model</label>
+          <input id="gs-model-keeper" placeholder="claude-sonnet-4-6" onchange="_gsSave()">
+        </div>
+        <div class="gs-field">
+          <label>Forge Model</label>
+          <input id="gs-model-forge" placeholder="claude-haiku-4-5-20251001" onchange="_gsSave()">
+        </div>
+      </div>
+
+      <div class="gs-group">
+        <div class="gs-title">Voice</div>
+        <div class="gs-field">
+          <label>Voice Engine</label>
+          <select id="gs-tts" onchange="_gsSaveTts(this.value)">
+            <option value="off">Off (read only)</option>
+            <option value="browser">Browser (free)</option>
+            <option value="edge_tts">Edge TTS (free, good)</option>
+            <option value="elevenlabs">ElevenLabs (best)</option>
+          </select>
+        </div>
+        <div class="gs-field" id="gs-el-key-row" style="display:none">
+          <label>ElevenLabs Key</label>
+          <input type="password" id="gs-el-key" placeholder="xi-..." onchange="_gsSave()">
+        </div>
+      </div>
+
+      <div class="gs-group">
+        <div class="gs-title">Game</div>
+        <div class="gs-field">
+          <label>Dice Feedback</label>
+          <select id="gs-dice" onchange="_setDiceFeedbackMode(this.value)">
+            <option value="off">Off</option>
+            <option value="subtle">Subtle</option>
+            <option value="visible">Visible</option>
+          </select>
+        </div>
+        <div class="gs-field">
+          <label>Ambience</label>
+          <select id="gs-ambience" onchange="_ambSetMode(this.value)">
+            <option value="off">Off</option>
+            <option value="subtle">Subtle</option>
+            <option value="full">Full</option>
+          </select>
+        </div>
+        <div class="gs-field">
+          <label>Companion Hints</label>
+          <select id="gs-tutorials" onchange="try{localStorage.setItem('tutorials',this.value)}catch(e){}">
+            <option value="on">On</option>
+            <option value="off">Off</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="gs-group">
+        <div class="gs-title">Save Data</div>
+        <div class="gs-field">
+          <label>Save Directory</label>
+          <input id="gs-save-dir" placeholder="(local)" onchange="_saveSaveDir()">
+          <div style="font-size:10px;color:rgba(200,180,140,0.3);margin-top:4px">Cloud sync: point at OneDrive/Dropbox folder</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -8840,7 +8954,10 @@ function dismissTitle() {
   el.classList.add('fading');
   setTimeout(() => {
     el.style.display = 'none';
-    // Go straight to the studio — Forge is behind the Forge tab now
+    if (document.body.dataset.mode === 'forge') {
+      // Game launch: title -> save slot picker
+      showMainMenu();
+    }
   }, 900);
 }
 document.addEventListener('keydown', function _titleKey(e) {
@@ -9426,6 +9543,106 @@ function _setVoiceStatus(text) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// GAME SETTINGS — standalone settings panel for forge mode
+// ══════════════════════════════════════════════════════════════════════
+function openGameSettings() {
+  const bd = document.getElementById('game-settings-backdrop');
+  if (!bd) return;
+  bd.classList.add('active');
+  _playUISound('tab_switch');
+  // Populate fields
+  const dice = document.getElementById('gs-dice');
+  const amb = document.getElementById('gs-ambience');
+  const tut = document.getElementById('gs-tutorials');
+  const tts = document.getElementById('gs-tts');
+  if (dice) dice.value = _getDiceFeedbackMode();
+  if (amb) amb.value = _ambGetMode();
+  if (tut) try { tut.value = localStorage.getItem('tutorials') || 'on'; } catch(e) {}
+  if (tts) {
+    try { tts.value = localStorage.getItem('tts_provider') || 'browser'; } catch(e) {}
+    _gsToggleElKey(tts.value);
+  }
+  _loadSaveDir().then(() => {
+    const sd = document.getElementById('gs-save-dir');
+    const sd2 = document.getElementById('cfg-save_dir');
+    if (sd && sd2) sd.value = sd2.value || '';
+  });
+  _gsLoadProvider();
+}
+
+function closeGameSettings() {
+  document.getElementById('game-settings-backdrop')?.classList.remove('active');
+}
+
+function _gsToggleElKey(val) {
+  const row = document.getElementById('gs-el-key-row');
+  if (row) row.style.display = val === 'elevenlabs' ? '' : 'none';
+}
+
+function _gsSaveTts(val) {
+  try { localStorage.setItem('tts_provider', val); } catch(e) {}
+  _gsToggleElKey(val);
+}
+
+const _GS_PRESETS = {
+  anthropic: { model_keeper: 'claude-sonnet-4-6', model_forge: 'claude-haiku-4-5-20251001' },
+  openai:    { model_keeper: 'gpt-4o', model_forge: 'gpt-4o-mini' },
+  ollama:    { model_keeper: 'llama3.1', model_forge: 'llama3.1' },
+  together:  { model_keeper: 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo', model_forge: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo' },
+};
+
+function _gsApplyPreset(preset) {
+  const p = _GS_PRESETS[preset];
+  if (!p) return;
+  const mk = document.getElementById('gs-model-keeper');
+  const mf = document.getElementById('gs-model-forge');
+  if (mk) mk.value = p.model_keeper;
+  if (mf) mf.value = p.model_forge;
+  _gsSave();
+}
+
+async function _gsSave() {
+  const key = document.getElementById('gs-api-key')?.value?.trim();
+  // Save API key if provided
+  if (key && key.startsWith('sk-')) {
+    try {
+      await fetch(authUrl('/system/api_key_set'), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key: key}),
+      });
+    } catch(e) {}
+  }
+  // Save LLM config
+  const cfg = {
+    provider: document.getElementById('gs-provider')?.value || 'anthropic',
+    model_keeper: document.getElementById('gs-model-keeper')?.value || '',
+    model_forge: document.getElementById('gs-model-forge')?.value || '',
+  };
+  try {
+    await fetch(authUrl('/system/llm_config'), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(cfg),
+    });
+  } catch(e) {}
+}
+
+async function _gsLoadProvider() {
+  try {
+    const r = await fetch(authUrl('/system/llm_config'));
+    if (!r.ok) return;
+    const cfg = await r.json();
+    const prov = document.getElementById('gs-provider');
+    const mk = document.getElementById('gs-model-keeper');
+    const mf = document.getElementById('gs-model-forge');
+    if (mk && cfg.model_keeper) mk.value = cfg.model_keeper;
+    if (mf && cfg.model_forge) mf.value = cfg.model_forge;
+    if (prov && cfg.provider) prov.value = cfg.provider;
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // SAVE DIRECTORY — cloud sync support
 // ══════════════════════════════════════════════════════════════════════
 async function _saveSaveDir() {
@@ -9584,9 +9801,11 @@ async function _submitApiKey() {
   if (!hasKey) {
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('api-key-gate').classList.add('active');
+  } else if (document.body.dataset.mode === 'forge') {
+    // Forge mode: always show title screen -> save slot picker
+    // This IS the game launch experience
   } else {
-    // Key exists — skip the title screen entirely for returning players
-    // who already have a slot loaded (no need to see the splash every time)
+    // Studio mode: skip title for returning players
     const activeSlot = localStorage.getItem('amplify_active_slot');
     if (activeSlot) {
       const el = document.getElementById('title-screen');
@@ -9602,13 +9821,6 @@ document.addEventListener('keydown', function(e) {
     if (gate && gate.classList.contains('active')) _submitApiKey();
   }
 });
-
-// Auto-switch to Games tab in forge mode (standalone game)
-if (document.body.dataset.mode === 'forge') {
-  setTimeout(() => {
-    if (typeof switchTab === 'function') switchTab('games');
-  }, 100);
-}
 
 connect();
 </script>
