@@ -15,7 +15,7 @@ set "PYTHON_DIR=%INSTALL_DIR%\python"
 set "GAME_DIR=%INSTALL_DIR%\game"
 set "PYTHON_URL=https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip"
 set "PIP_URL=https://bootstrap.pypa.io/get-pip.py"
-set "REPO_ZIP=https://github.com/kuhlmanne/WIngman/archive/refs/heads/main.zip"
+set "REPO_ZIP=https://github.com/kuhlmanne/EmberForge/archive/refs/heads/main.zip"
 
 :: Create install directory
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"

@@ -23,7 +23,7 @@ import zipfile
 import shutil
 import io
 
-REPO_ZIP = "https://github.com/eKuhlmann/wingman/archive/refs/heads/main.zip"
+REPO_ZIP = "https://github.com/kuhlmanne/EmberForge/archive/refs/heads/main.zip"
 INSTALL_DIR = os.path.join(os.path.expanduser("~"), "EmberForge")
 GAME_DIR = os.path.join(INSTALL_DIR, "game")
 
