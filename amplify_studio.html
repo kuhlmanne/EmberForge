@@ -3116,7 +3116,7 @@ main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
   margin-left: 40px;
 }
 .session-entry.player::before {
-  content: 'YOU';
+  content: attr(data-player-name);
   display: block;
   font-size: 9px;
   letter-spacing: 0.25em;
@@ -7318,6 +7318,7 @@ function _appendBeat(beat) {
       </div>
     `;
   } else if (who === 'player') {
+    div.setAttribute('data-player-name', _getPlayerProfile().player_name || 'YOU');
     div.textContent = beat.text;
   } else {
     // Keeper prose
@@ -7423,12 +7424,13 @@ function _renderTurnStrip() {
 
     if (entry === 'player') {
       slot.classList.add('player');
-      // Player slot needs a visible label (not just a tooltip)
+      const playerName = _getPlayerProfile().player_name || 'You';
+      // Player slot shows their actual name
       const label = document.createElement('div');
       label.className = 'fallback';
-      label.textContent = 'YOU';
-      label.style.fontSize = '10px';
-      label.style.letterSpacing = '0.15em';
+      label.textContent = playerName.length > 6 ? playerName.substring(0, 6) : playerName;
+      label.style.fontSize = '9px';
+      label.style.letterSpacing = '0.1em';
       slot.appendChild(label);
       // Tooltip
       const tt = document.createElement('div');
@@ -7437,7 +7439,7 @@ function _renderTurnStrip() {
       if (idx === 0) playerPositionHint = 'you lead the scene';
       else if (idx === lastIdx) playerPositionHint = 'you close the scene';
       tt.innerHTML = `
-        <div class="t-name">You</div>
+        <div class="t-name">${escHtml(playerName)}</div>
         <div class="t-stress">slot ${idx + 1} of ${order.length}</div>
         <div class="t-tags">${escHtml(playerPositionHint)}</div>
       `;
@@ -8736,6 +8738,16 @@ function _buildForgeQuestions() {
       });
     }
   }
+
+  // Always end with: what is your name
+  // The forge acknowledges you. Your name replaces "You" everywhere.
+  picked.push({
+    id: 'player_name',
+    prompt: 'What is your name?\nI will not forget it.',
+    type: 'input',
+    placeholder: '',
+  });
+
   return picked;
 }
 
@@ -8890,14 +8902,15 @@ async function _forgeComplete() {
   `;
   container.style.opacity = '1';
 
-  // Save birthday + Steam to global profile (first run only, never asked again)
+  // Save profile data (name is always saved, birthday/steam on first run)
+  const profileData = {};
+  if (_forgeAnswers.player_name) profileData.player_name = _forgeAnswers.player_name;
   if (!_hasPlayerProfile()) {
-    const profileData = {};
     if (_forgeAnswers.birthday) profileData.birthday = _forgeAnswers.birthday;
     if (_forgeAnswers.steam !== undefined) profileData.steam_integration = _forgeAnswers.steam;
     profileData.first_forge_ts = Date.now();
-    _savePlayerProfile(profileData);
   }
+  _savePlayerProfile(profileData);
 
   // Call the server to generate a unique persona from the answers
   let result = null;
