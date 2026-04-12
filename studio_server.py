@@ -347,6 +347,13 @@ def handle_claude_routing(query: str):
 import queue as queue_module
 
 STUDIO_HTML_PATH = os.path.join(WINGMAN_DIR, "amplify_studio.html")
+
+# Initialize game settings on startup — auto-imports .env keys
+try:
+    import game_settings as _gs
+    _gs.load()
+except Exception:
+    pass
 FORGE_MODE_INJECT = '<body data-mode="forge">'  # replaces <body> to hide non-game tabs
 
 
@@ -496,9 +503,20 @@ class StudioHandler(BaseHTTPRequestHandler):
         # below works consistently.
         if "?" in self.path:
             self.path = self.path.split("?", 1)[0]
-        if self.path == "/" or self.path == "/studio" or self.path == "/game":
-            # EMBER FORGE PUBLIC: always inject data-mode="forge" to hide
-            # Room/Claude/All tabs. This is the GAME, not the studio.
+        if self.path == "/studio":
+            # Full Amplify Studio — Eric's personal view with all tabs
+            if os.path.exists(STUDIO_HTML_PATH):
+                with open(STUDIO_HTML_PATH, encoding="utf-8") as f:
+                    html = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(html.encode())
+            else:
+                self.send_error(404, "Studio HTML not found")
+
+        elif self.path == "/" or self.path == "/game":
+            # Ember Forge game mode — no Room/Claude/All tabs, game UI only
             if os.path.exists(STUDIO_HTML_PATH):
                 with open(STUDIO_HTML_PATH, encoding="utf-8") as f:
                     html = f.read()
@@ -981,6 +999,22 @@ class StudioHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"path": ""}).encode())
+            return
+
+        elif self.path == "/system/settings":
+            # GET /system/settings — return all game settings (keys masked)
+            try:
+                import game_settings
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps(game_settings.get_safe()).encode())
+            except Exception as _e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(_e)}).encode())
             return
 
         elif self.path == "/system/api_key_status":
@@ -1652,6 +1686,23 @@ class StudioHandler(BaseHTTPRequestHandler):
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(json.dumps({"ok": True, "path": path}).encode())
+            except Exception as _e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": False, "error": str(_e)}).encode())
+            return
+
+        elif self.path == "/system/settings":
+            # POST /system/settings {key: value, ...} — update game settings
+            try:
+                import game_settings
+                game_settings.update(data)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": True}).encode())
             except Exception as _e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")

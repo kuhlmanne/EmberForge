@@ -4844,16 +4844,50 @@ footer {
   <div class="title-prompt">click anywhere to enter</div>
 </div>
 
-<!-- ══ MAIN MENU — appears after title screen dismisses ═══════════════ -->
+<!-- ══ MAIN MENU — full-screen game launcher ═══════════════════════════ -->
 <div id="main-menu">
-  <div class="menu-container">
+  <div class="menu-container" style="max-width:900px">
     <div class="menu-title">EMBER FORGE</div>
+    <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:0.3em;color:rgba(212,165,84,0.4);text-align:center;margin-bottom:36px;text-transform:uppercase">Choose your path</div>
     <div class="menu-slots" id="menu-slots">
-      <!-- Injected by _renderMenuSlots() -->
+      <!-- Injected by _loadSlotPreviews() -->
     </div>
-    <div class="menu-actions">
-      <button class="menu-btn settings-btn" onclick="openGameSettings()">Settings</button>
-      <button class="menu-btn" onclick="closeMainMenu();switchTab('games')">About</button>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:28px;flex-wrap:wrap">
+      <button class="menu-btn" onclick="document.getElementById('menu-settings').style.display = document.getElementById('menu-settings').style.display === 'none' ? 'block' : 'none'">&#9881; Settings</button>
+    </div>
+    <!-- Inline settings (toggles open/close, no separate overlay) -->
+    <div id="menu-settings" style="display:none;max-width:480px;margin:24px auto 0;background:rgba(16,12,22,0.8);border:1px solid rgba(212,165,84,0.15);border-radius:6px;padding:24px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.2em;color:rgba(212,165,84,0.5);margin-bottom:10px;text-transform:uppercase">AI Provider</div>
+          <select id="ms-provider" style="width:100%;padding:6px;background:rgba(20,16,28,0.9);border:1px solid rgba(212,165,84,0.2);color:var(--parchment);font-size:12px;margin-bottom:8px" onchange="_msPreset(this.value)">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI</option>
+            <option value="ollama">Ollama (free)</option>
+            <option value="together">Together AI</option>
+          </select>
+          <input id="ms-api-key" type="password" placeholder="API Key" style="width:100%;padding:6px;background:rgba(20,16,28,0.9);border:1px solid rgba(212,165,84,0.2);color:var(--parchment);font-size:12px;margin-bottom:4px" onchange="_msSaveKey(this.value)">
+          <div id="ms-key-help" style="font-size:10px;color:rgba(138,176,232,0.6);line-height:1.5;min-height:28px"></div>
+        </div>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.2em;color:rgba(212,165,84,0.5);margin-bottom:10px;text-transform:uppercase">Voice & Sound</div>
+          <select id="ms-tts" style="width:100%;padding:6px;background:rgba(20,16,28,0.9);border:1px solid rgba(212,165,84,0.2);color:var(--parchment);font-size:12px;margin-bottom:8px" onchange="try{localStorage.setItem('tts_provider',this.value)}catch(e){}">
+            <option value="off">Voice: Off</option>
+            <option value="browser">Voice: Browser (free)</option>
+            <option value="elevenlabs">Voice: ElevenLabs</option>
+          </select>
+          <select id="ms-ambience" style="width:100%;padding:6px;background:rgba(20,16,28,0.9);border:1px solid rgba(212,165,84,0.2);color:var(--parchment);font-size:12px;margin-bottom:8px" onchange="_ambSetMode(this.value)">
+            <option value="off">Ambience: Off</option>
+            <option value="subtle">Ambience: Subtle</option>
+            <option value="full">Ambience: Full</option>
+          </select>
+          <select id="ms-dice" style="width:100%;padding:6px;background:rgba(20,16,28,0.9);border:1px solid rgba(212,165,84,0.2);color:var(--parchment);font-size:12px" onchange="_setDiceFeedbackMode(this.value)">
+            <option value="off">Dice: Off</option>
+            <option value="subtle">Dice: Subtle</option>
+            <option value="visible">Dice: Visible</option>
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -8997,6 +9031,63 @@ function showMainMenu() {
   _playUISound('tab_switch');
   document.getElementById('main-menu').classList.add('active');
   _loadSlotPreviews();
+  _loadMenuSettings();
+}
+
+async function _loadMenuSettings() {
+  try {
+    const r = await fetch('/system/settings');
+    if (!r.ok) return;
+    const s = await r.json();
+    const prov = document.getElementById('ms-provider');
+    const tts = document.getElementById('ms-tts');
+    const amb = document.getElementById('ms-ambience');
+    const dice = document.getElementById('ms-dice');
+    if (prov && s.llm_provider) prov.value = s.llm_provider;
+    if (tts && s.tts_provider) tts.value = s.tts_provider;
+    if (amb && s.ambience) amb.value = s.ambience;
+    if (dice && s.dice_feedback) dice.value = s.dice_feedback;
+    // Show key status
+    const keyInput = document.getElementById('ms-api-key');
+    if (keyInput) {
+      keyInput.placeholder = s.anthropic_api_key_set ? s.anthropic_api_key_display : 'Paste your API key here';
+    }
+    _msPreset(prov?.value || 'anthropic');
+  } catch(e) {}
+}
+
+function _msPreset(preset) {
+  const hints = {
+    anthropic: 'Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--crystal)">console.anthropic.com</a> — starts with sk-ant-',
+    openai: 'Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--crystal)">platform.openai.com</a>',
+    ollama: 'No key needed! <a href="https://ollama.com" target="_blank" style="color:var(--crystal)">Download Ollama</a> — free, runs locally',
+    together: 'Get a key at <a href="https://api.together.xyz" target="_blank" style="color:var(--crystal)">together.xyz</a>',
+  };
+  const help = document.getElementById('ms-key-help');
+  if (help) help.innerHTML = hints[preset] || '';
+  // Save provider choice
+  fetch('/system/settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({llm_provider: preset}),
+  }).catch(() => {});
+}
+
+async function _msSaveKey(key) {
+  if (!key || key.length < 5) return;
+  try {
+    await fetch('/system/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({anthropic_api_key: key.trim()}),
+    });
+    // Also set in env for immediate use
+    await fetch(authUrl('/system/api_key_set'), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key: key.trim()}),
+    });
+  } catch(e) {}
 }
 
 function closeMainMenu() {
