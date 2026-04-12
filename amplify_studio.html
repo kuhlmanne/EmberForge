@@ -5117,6 +5117,9 @@ footer {
         <div class="gs-field">
           <label>API Key</label>
           <input type="password" id="gs-api-key" placeholder="sk-ant-..." onchange="_gsSave()">
+          <div style="font-size:10px;margin-top:4px;color:rgba(200,180,140,0.35);line-height:1.5">
+            <span id="gs-key-help"></span>
+          </div>
         </div>
         <div class="gs-field">
           <label>Keeper Model</label>
@@ -9567,7 +9570,10 @@ function openGameSettings() {
     const sd2 = document.getElementById('cfg-save_dir');
     if (sd && sd2) sd.value = sd2.value || '';
   });
-  _gsLoadProvider();
+  _gsLoadProvider().then(() => {
+    const prov = document.getElementById('gs-provider');
+    if (prov) _gsApplyPreset(prov.value);
+  });
 }
 
 function closeGameSettings() {
@@ -9598,6 +9604,15 @@ function _gsApplyPreset(preset) {
   const mf = document.getElementById('gs-model-forge');
   if (mk) mk.value = p.model_keeper;
   if (mf) mf.value = p.model_forge;
+  // Update help text for getting a key
+  const help = document.getElementById('gs-key-help');
+  const hints = {
+    anthropic: 'Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--crystal)">console.anthropic.com</a> — sign up, go to API Keys, create one. Starts with sk-ant-',
+    openai: 'Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--crystal)">platform.openai.com</a> — sign up, create an API key. Starts with sk-',
+    ollama: 'No key needed! <a href="https://ollama.com" target="_blank" style="color:var(--crystal)">Download Ollama</a>, run it, then type "ollama" as the key. Free and local.',
+    together: 'Get a key at <a href="https://api.together.xyz" target="_blank" style="color:var(--crystal)">together.xyz</a> — sign up, go to Settings > API Keys.',
+  };
+  if (help) help.innerHTML = hints[preset] || '';
   _gsSave();
 }
 
