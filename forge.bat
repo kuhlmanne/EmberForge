@@ -36,10 +36,10 @@ if errorlevel 1 (
 
 :: Open browser
 echo   Opening browser...
-start http://localhost:7070/studio
+start http://localhost:7070
 
 echo.
-echo   Ember Forge is running at http://localhost:7070/studio
+echo   Ember Forge is running at http://localhost:7070
 echo   Other devices on your network: http://%COMPUTERNAME%:7070/studio
 echo.
 echo   Press any key to stop the server.

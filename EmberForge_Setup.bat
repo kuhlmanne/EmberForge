@@ -103,6 +103,6 @@ echo.
 :launch
 echo   Starting Ember Forge...
 cd /d "%GAME_DIR%"
-start "" "%PYTHON_DIR%\python.exe" -c "import webbrowser,time; time.sleep(3); webbrowser.open('http://localhost:7070/studio')"
+start "" "%PYTHON_DIR%\python.exe" -c "import webbrowser,time; time.sleep(3); webbrowser.open('http://localhost:7070')"
 "%PYTHON_DIR%\python.exe" studio_server.py
 pause
