@@ -373,9 +373,9 @@ def _get_save_base_dir() -> str:
 
 
 def _redirect_stores_to_slot(slot_dir: str) -> None:
-    """Point all persistent state stores at a save-slot directory.
-    Called when loading or creating a save slot. Each store module has
-    a STORE_FILE Path that we redirect to the slot directory."""
+    """Point ALL persistent state at a save-slot directory. This includes
+    state files AND the persona registry's search path, so each slot is
+    fully self-contained with its own personas + state. No bleed."""
     from pathlib import Path
     slot = Path(slot_dir)
     try:
@@ -402,6 +402,52 @@ def _redirect_stores_to_slot(slot_dir: str) -> None:
         import reward_cards
         reward_cards.STORE_FILE = slot / ".void_crystals.json"
     except Exception: pass
+    # Point persona_registry at the slot's personas/ dir so each slot
+    # has its own set of companions (starters copied in + generated).
+    try:
+        import persona_registry
+        slot_personas = slot / "personas"
+        if slot_personas.exists():
+            persona_registry.PERSONAS_DIR = slot_personas
+            persona_registry.load()  # reload from new dir
+    except Exception: pass
+
+
+def _init_slot_personas(slot_dir: str) -> None:
+    """Copy starter persona JSONs + portraits into a new slot's personas/
+    directory. Called when creating a new save slot. After this, the slot
+    is self-contained and persona_registry can load from it exclusively."""
+    import shutil
+    from pathlib import Path
+    slot = Path(slot_dir)
+    slot_personas = slot / "personas"
+    slot_images = slot / "persona_images"
+    slot_personas.mkdir(parents=True, exist_ok=True)
+    slot_images.mkdir(parents=True, exist_ok=True)
+
+    # Copy starter persona definitions
+    shared_personas = Path(WINGMAN_DIR) / "personas"
+    if shared_personas.exists():
+        for f in shared_personas.glob("*.json"):
+            # Skip non-persona config files
+            if f.name.startswith("_") or f.name in ("edge_voice_sources.json", "el_voice_sources.json"):
+                continue
+            # Only copy the 5 starters, not previously generated personas
+            starter_ids = {"shadowheart", "tesla", "laezel", "jefferson", "kerrigan"}
+            stem = f.stem
+            if stem in starter_ids:
+                dest = slot_personas / f.name
+                if not dest.exists():
+                    shutil.copy2(str(f), str(dest))
+
+    # Copy starter portraits
+    shared_images = Path(WINGMAN_DIR) / "persona_images"
+    if shared_images.exists():
+        for f in shared_images.iterdir():
+            if f.is_file():
+                dest = slot_images / f.name
+                if not dest.exists():
+                    shutil.copy2(str(f), str(dest))
 
 
 def _apply_reward_card_effect(effect: dict) -> None:
@@ -667,13 +713,18 @@ class StudioHandler(BaseHTTPRequestHandler):
                             _all = [p for p in _all if p.id in _arrived_ids]
                     except Exception:
                         pass  # no filtering if game_progression unavailable
-                    _images_dir = os.path.join(WINGMAN_DIR, "persona_images")
+                    # Check both slot-specific + shared persona_images dirs
+                    _img_dirs = [os.path.join(WINGMAN_DIR, "persona_images")]
+                    try:
+                        _slot_img = str(_persona_registry.PERSONAS_DIR).replace("personas", "persona_images")
+                        if _slot_img not in _img_dirs:
+                            _img_dirs.insert(0, _slot_img)
+                    except Exception: pass
                     _personas_out = []
                     for _p in _all:
-                        # Detect whether a portrait file exists (prevents the
-                        # img-tag 404 blink for personas without portraits).
                         _has_portrait = any(
-                            os.path.exists(os.path.join(_images_dir, f"{_p.id}.{_ext}"))
+                            os.path.exists(os.path.join(_idir, f"{_p.id}.{_ext}"))
+                            for _idir in _img_dirs
                             for _ext in ("jpg", "jpeg", "png", "webp")
                         )
                         with _mute_lock:
@@ -824,13 +875,22 @@ class StudioHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b"unknown persona")
                 return
-            _images_dir = os.path.join(WINGMAN_DIR, "persona_images")
+            # Check slot-specific persona_images first, then shared
             _img_path = None
-            for _ext in ("jpg", "jpeg", "png", "webp"):
-                _candidate = os.path.join(_images_dir, f"{_pid}.{_ext}")
-                if os.path.exists(_candidate):
-                    _img_path = _candidate
-                    break
+            _search_dirs = []
+            try:
+                import persona_registry as _preg
+                _slot_images = str(_preg.PERSONAS_DIR).replace("personas", "persona_images")
+                _search_dirs.append(_slot_images)
+            except Exception: pass
+            _search_dirs.append(os.path.join(WINGMAN_DIR, "persona_images"))
+            for _images_dir in _search_dirs:
+                for _ext in ("jpg", "jpeg", "png", "webp"):
+                    _candidate = os.path.join(_images_dir, f"{_pid}.{_ext}")
+                    if os.path.exists(_candidate):
+                        _img_path = _candidate
+                        break
+                if _img_path: break
             if not _img_path:
                 self.send_response(404)
                 self.end_headers()
@@ -1760,6 +1820,7 @@ class StudioHandler(BaseHTTPRequestHandler):
                 if os.path.exists(slot_dir):
                     shutil.rmtree(slot_dir, ignore_errors=True)
                 os.makedirs(slot_dir, exist_ok=True)
+                _init_slot_personas(slot_dir)  # copy starters into the slot
                 _redirect_stores_to_slot(slot_dir)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -1943,7 +2004,14 @@ class StudioHandler(BaseHTTPRequestHandler):
                 persona.setdefault("profile_image", "")
                 persona.setdefault("portrait_art_prompt", "")
                 # Write to personas/ directory
-                persona_path = os.path.join(WINGMAN_DIR, "personas", f"{pid}.json")
+                # Write to the active slot's personas/ dir (not the shared dir)
+                try:
+                    import persona_registry as _pr
+                    _personas_dir = str(_pr.PERSONAS_DIR)
+                except Exception:
+                    _personas_dir = os.path.join(WINGMAN_DIR, "personas")
+                os.makedirs(_personas_dir, exist_ok=True)
+                persona_path = os.path.join(_personas_dir, f"{pid}.json")
                 with open(persona_path, "w", encoding="utf-8") as _f:
                     json.dump(persona, _f, indent=2, ensure_ascii=False)
                 # Generate a unique ElevenLabs voice if key is available
