@@ -1286,6 +1286,103 @@ def advance_turn() -> dict:
     }
 
 
+def generate_player_choices() -> dict:
+    """Generate 3 action choices + ember reactions for the player's turn.
+    Called when the turn order reaches 'player'. Returns {choices, reactions}
+    where choices is a list of 3 dicts and reactions is a list of ember opinions."""
+    session = session_store.get_active()
+    if not session:
+        return {"ok": False, "error": "no active session"}
+
+    party = session.get("party") or []
+    order = session.get("turn_order") or []
+    encounter_type = session.get("encounter_type") or "social"
+    encounter_dc = session.get("encounter_dc", 14)
+
+    prior_beats = "\n".join(
+        f"  [{b.get('who')}] {b.get('text')}"
+        for b in session.get("beats", [])[-12:]
+    )
+
+    # Build ember names for the prompt
+    ember_names = []
+    for pid in party:
+        try:
+            p = persona_registry.get(pid) if _PERSONA_OK else None
+            ember_names.append(p.display_name if p else pid)
+        except Exception:
+            ember_names.append(pid)
+
+    system_suffix = (
+        "\n\n### CURRENT MODE: PLAYER CHOICE GENERATION\n"
+        "The turn has reached the player. You must generate:\n"
+        "1. A brief 1-2 sentence description of the current moment (what the "
+        "player faces right now).\n"
+        "2. Three action choices for the player, each 5-12 words. One should "
+        "be bold/direct, one cautious/careful, one creative/unexpected. Each "
+        "choice should lead to a genuinely different outcome.\n"
+        "3. For each ember in the party, a 1-sentence reaction/opinion about "
+        "what the player should do. They should disagree with each other based "
+        "on their personality — combat embers want action, empathic embers want "
+        "caution, analytical embers want information.\n\n"
+        "Output format (EXACT):\n"
+        "<MOMENT>Brief description of what the player faces</MOMENT>\n"
+        "<CHOICE1>Bold action (5-12 words)</CHOICE1>\n"
+        "<CHOICE2>Cautious action (5-12 words)</CHOICE2>\n"
+        "<CHOICE3>Creative action (5-12 words)</CHOICE3>\n"
+        "<REACTION persona=\"name\">Their 1-sentence opinion</REACTION>\n"
+        "(one REACTION per party member)"
+    )
+
+    user = (
+        f"It is the player's turn.\n\n"
+        f"Encounter type: {encounter_type}  DC: {encounter_dc}\n"
+        f"Party members: {', '.join(ember_names)}\n\n"
+        f"Recent beats:\n{prior_beats or '  (scene just opened)'}\n\n"
+        f"Generate the moment, 3 choices, and party reactions."
+    )
+
+    try:
+        raw = _call_sonnet_with_system(user, system_suffix=system_suffix, max_tokens=500)
+    except Exception as e:
+        return {"ok": False, "error": f"generation failed: {e}"}
+
+    # Parse the structured output
+    moment = ""
+    choices = []
+    reactions = []
+
+    m = re.search(r"<MOMENT>(.*?)</MOMENT>", raw, re.DOTALL | re.IGNORECASE)
+    if m:
+        moment = m.group(1).strip()
+
+    for i in range(1, 4):
+        cm = re.search(rf"<CHOICE{i}>(.*?)</CHOICE{i}>", raw, re.DOTALL | re.IGNORECASE)
+        if cm:
+            choices.append({"id": i, "text": cm.group(1).strip()})
+
+    for rm in re.finditer(r'<REACTION\s+persona="([^"]*)">(.*?)</REACTION>', raw, re.DOTALL | re.IGNORECASE):
+        reactions.append({"persona": rm.group(1).strip(), "text": rm.group(2).strip()})
+
+    # Fallback if parsing failed
+    if not choices:
+        choices = [
+            {"id": 1, "text": "Act decisively"},
+            {"id": 2, "text": "Proceed with caution"},
+            {"id": 3, "text": "Try something unexpected"},
+        ]
+    if not moment:
+        moment = "The moment is yours."
+
+    return {
+        "ok": True,
+        "moment": moment,
+        "choices": choices,
+        "reactions": reactions,
+        "deadline": time.time() + 30,
+    }
+
+
 def _call_sonnet_with_system(user_content: str, system_suffix: str = "", max_tokens: int = 300) -> str:
     """Helper for per-turn and resolution calls where we want to append a
     mode-specific instruction to the base Keeper system prompt."""

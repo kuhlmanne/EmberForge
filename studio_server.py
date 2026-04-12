@@ -1867,6 +1867,25 @@ class StudioHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"ok": False, "error": str(_e)}).encode())
             return
 
+        elif self.path == "/session/player_choices":
+            # POST /session/player_choices {}
+            # Generate 3 action choices + ember reactions for the player's turn.
+            try:
+                import session_forge
+                result = session_forge.generate_player_choices()
+                status = 200 if result.get("ok") else 400
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps(result).encode())
+            except Exception as _e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": False, "error": str(_e)}).encode())
+            return
+
         elif self.path == "/voice/chat":
             # POST /voice/chat {"persona_id": "shadowheart", "transcript": "hey",
             #   "location": "camp", "history": [{role, content}, ...]}

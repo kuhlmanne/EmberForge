@@ -7679,13 +7679,19 @@ function _renderActiveControls() {
   const inputBar = document.querySelector('.session-input-bar');
   if (!inputBar) return;
   inputBar.innerHTML = `
-    <textarea id="session-input" placeholder="Waiting for your turn..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();submitSessionTurn();}" disabled></textarea>
-    <div class="session-input-side">
-      <span id="session-countdown" class="turn-countdown" style="display:none">
-        <span>Your turn</span>&nbsp;&mdash;&nbsp;<span class="num">30</span>s
-      </span>
-      <button id="session-submit-btn" onclick="submitSessionTurn()" disabled>Act</button>
-      <button id="session-interrupt-btn" class="interrupt-btn" onclick="sessionInterrupt()">\u23fa Interrupt</button>
+    <div id="player-choice-area" style="display:none">
+      <div id="player-reactions" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div id="player-moment" style="text-align:center;font-family:'Georgia',serif;font-size:15px;color:var(--parchment);margin-bottom:16px;line-height:1.6"></div>
+      <div id="player-choices" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+        <div id="session-countdown" class="turn-countdown" style="display:none">
+          <span>Your turn</span>&nbsp;&mdash;&nbsp;<span class="num">30</span>s
+        </div>
+        <button id="session-mic-btn" style="width:48px;height:48px;border-radius:50%;background:rgba(212,165,84,0.12);border:1px solid rgba(212,165,84,0.4);color:var(--gold-light);font-size:20px;cursor:pointer" onclick="_sessionMicStart()" title="Speak your action">&#x1F399;</button>
+      </div>
+    </div>
+    <div id="player-waiting" style="text-align:center;color:rgba(200,180,140,0.4);font-family:'Cinzel',serif;font-size:12px;letter-spacing:0.15em">
+      Waiting for your turn...
     </div>
   `;
 }
@@ -7765,23 +7771,120 @@ async function _autoAdvance() {
   }
 }
 
-function _enablePlayerInput(deadlineTs) {
-  const input = document.getElementById('session-input');
-  const btn   = document.getElementById('session-submit-btn');
-  if (input) {
-    input.disabled = false;
-    input.placeholder = 'Your turn. What do you do?';
-    input.focus();
-  }
-  if (btn) btn.disabled = false;
+async function _enablePlayerInput(deadlineTs) {
+  // Show the choice area, hide the waiting message
+  const choiceArea = document.getElementById('player-choice-area');
+  const waiting = document.getElementById('player-waiting');
+  if (waiting) waiting.style.display = 'none';
+  if (choiceArea) choiceArea.style.display = 'block';
+
   _startPlayerCountdown(deadlineTs);
+  _playUISound('session_start');
+
+  // Fetch 3 choices + ember reactions from the Keeper
+  try {
+    const r = await fetch(authUrl('/session/player_choices'), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({}),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      _renderPlayerChoices(data);
+    }
+  } catch (e) {
+    console.warn('[session] choice generation failed:', e);
+  }
+}
+
+function _renderPlayerChoices(data) {
+  const momentEl = document.getElementById('player-moment');
+  const choicesEl = document.getElementById('player-choices');
+  const reactionsEl = document.getElementById('player-reactions');
+
+  if (momentEl) momentEl.textContent = data.moment || 'What do you do?';
+
+  // Render ember reactions as small speech bubbles
+  if (reactionsEl && data.reactions) {
+    reactionsEl.innerHTML = data.reactions.map(r => `
+      <div style="background:rgba(20,16,28,0.8);border:1px solid rgba(212,165,84,0.2);
+        border-radius:8px;padding:8px 12px;max-width:200px;font-size:12px;line-height:1.5">
+        <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);
+          letter-spacing:0.12em;margin-bottom:3px">${escHtml(r.persona)}</div>
+        <div style="color:var(--parchment);opacity:0.8;font-style:italic">"${escHtml(r.text)}"</div>
+      </div>
+    `).join('');
+    // Voice the first reaction (the strongest opinion)
+    if (data.reactions.length > 0) {
+      _speakBrowserTTS(data.reactions[0].text);
+    }
+  }
+
+  // Render 3 choice cards
+  if (choicesEl && data.choices) {
+    const icons = ['\u2694', '\u{1F6E1}', '\u2728']; // sword, shield, sparkle
+    choicesEl.innerHTML = data.choices.map((c, i) => `
+      <button onclick="_pickChoice(${c.id}, '${escHtml(c.text).replace(/'/g, "\\'")}')"
+        style="flex:1;min-width:140px;max-width:220px;padding:16px 14px;
+        background:linear-gradient(145deg,rgba(28,22,38,0.95),rgba(16,12,24,0.95));
+        border:1px solid rgba(212,165,84,0.25);border-radius:6px;cursor:pointer;
+        text-align:center;transition:all 0.3s ease;color:var(--parchment);
+        font-family:'Georgia',serif;font-size:14px;line-height:1.5"
+        onmouseenter="this.style.borderColor='var(--gold)';this.style.transform='translateY(-3px)';_playUISound('card_hover')"
+        onmouseleave="this.style.borderColor='rgba(212,165,84,0.25)';this.style.transform='none'">
+        <div style="font-size:22px;margin-bottom:6px">${icons[i] || '\u2756'}</div>
+        ${escHtml(c.text)}
+      </button>
+    `).join('');
+  }
+}
+
+function _pickChoice(choiceId, choiceText) {
+  _playUISound('card_pick');
+  submitSessionTurn(choiceText);
+  const choiceArea = document.getElementById('player-choice-area');
+  if (choiceArea) choiceArea.style.display = 'none';
+  const waiting = document.getElementById('player-waiting');
+  if (waiting) { waiting.style.display = 'block'; waiting.textContent = 'The dice are rolling...'; }
+  _clearPlayerCountdown();
+}
+
+// Session mic: hold to speak during your turn, transcription becomes your action
+function _sessionMicStart() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+  const rec = new SpeechRecognition();
+  rec.continuous = false;
+  rec.interimResults = false;
+  rec.lang = 'en-US';
+  rec.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    if (text.trim()) {
+      _playUISound('card_pick');
+      submitSessionTurn(text.trim());
+      const choiceArea = document.getElementById('player-choice-area');
+      if (choiceArea) choiceArea.style.display = 'none';
+      const waiting = document.getElementById('player-waiting');
+      if (waiting) { waiting.style.display = 'block'; waiting.textContent = '"' + text.trim() + '"'; }
+      _clearPlayerCountdown();
+    }
+  };
+  rec.onerror = () => {};
+  rec.onend = () => {
+    const btn = document.getElementById('session-mic-btn');
+    if (btn) { btn.style.background = 'rgba(212,165,84,0.12)'; btn.textContent = '\u{1F399}'; }
+  };
+  rec.start();
+  const btn = document.getElementById('session-mic-btn');
+  if (btn) { btn.style.background = 'rgba(220,80,80,0.2)'; btn.textContent = '...'; }
+  _playUISound('forge_answer');
 }
 
 function _disablePlayerInput() {
-  const input = document.getElementById('session-input');
-  const btn   = document.getElementById('session-submit-btn');
-  if (input) { input.disabled = true; input.placeholder = 'Waiting for your turn...'; }
-  if (btn) btn.disabled = true;
+  const choiceArea = document.getElementById('player-choice-area');
+  const waiting = document.getElementById('player-waiting');
+  if (choiceArea) choiceArea.style.display = 'none';
+  if (waiting) { waiting.style.display = 'block'; waiting.textContent = 'Waiting for your turn...'; }
   _clearPlayerCountdown();
 }
 
@@ -7824,7 +7927,8 @@ async function _skipPlayerTurn() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({}),
     });
-    _appendPlayerBeat('(hesitates)');
+    const playerName = _getPlayerProfile().player_name || 'You';
+    _appendPlayerBeat(`${playerName} freezes. The party acts without them.`);
     _disablePlayerInput();
     _autoAdvance();
   } catch (_) {}
@@ -7913,14 +8017,17 @@ function _hideThinking() {
   if (el) el.remove();
 }
 
-async function submitSessionTurn() {
+async function submitSessionTurn(choiceText) {
   if (_sessionPending || !_sessionActive) return;
-  const input = document.getElementById('session-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
+  // Accept text from choice card click, mic input, or legacy textarea
+  let text = choiceText || '';
+  if (!text) {
+    const input = document.getElementById('session-input');
+    text = input ? input.value.trim() : '';
+    if (input) input.value = '';
+  }
+  if (!text) text = 'I observe and wait.'; // default if timer runs out
   _sessionPending = true;
-  document.getElementById('session-submit-btn').disabled = true;
   _appendEntry('player', text);
   _showThinking('The Keeper considers...');
   try {
