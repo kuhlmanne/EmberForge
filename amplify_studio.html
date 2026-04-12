@@ -38,6 +38,8 @@ body[data-mode="forge"] #panel-claude,
 body[data-mode="forge"] #panel-all { display: none !important; }
 body[data-mode="forge"] #sidebar { display: none !important; }
 body[data-mode="forge"] .camp-actions { display: none !important; }
+body[data-mode="forge"] .hud-actions { display: none !important; }
+body[data-mode="forge"] .input-row { display: none !important; }
 body[data-mode="forge"] header { justify-content: space-between; padding: 6px 18px; }
 body[data-mode="forge"] .logo { font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 0.15em; color: var(--gold); }
 
@@ -6143,9 +6145,9 @@ function renderCampTab() {
 function renderSceneStandees(personas, zoneName) {
   if (!personas.length) {
     let msg;
-    if (zoneName === 'void')       msg = 'The void is quiet.<br>No souls waiting to form.';
-    else if (zoneName === 'camp')  msg = 'The hearth is cold.<br>No one at rest.';
-    else                           msg = 'No companions on the road.<br>Drag someone in from camp.';
+    if (zoneName === 'void')       msg = 'The void is quiet.<br>No embers waiting to form.';
+    else if (zoneName === 'camp')  msg = 'The hearth is cold.<br>No embers at rest.';
+    else                           msg = 'No embers on the road.<br><span style="color:var(--gold);font-size:12px">Drag your companion from Camp to here to begin.</span>';
     return `<div class="scene-empty">${msg}</div>`;
   }
   return personas.map(p => renderStandee(p)).join('');
@@ -6159,13 +6161,19 @@ function personaInitials(p) {
 }
 
 function renderStandee(p) {
-  // Only emit an <img> tag if the backend confirmed a portrait file exists.
+  // Portrait: real image if available, canvas-generated if not
   let portraitHtml;
   if (p.has_portrait) {
     const portraitUrl = authUrl('/party/portrait/' + encodeURIComponent(p.id));
     portraitHtml = `<img src="${portraitUrl}" alt="${escHtml(p.display_name)}"/>`;
   } else {
-    portraitHtml = `<div class="fallback">${escHtml(personaInitials(p))}</div>`;
+    // Generate a unique canvas portrait from the ember's traits
+    const dataUrl = getPortraitUrl(p);
+    if (dataUrl) {
+      portraitHtml = `<img src="${dataUrl}" alt="${escHtml(p.display_name)}"/>`;
+    } else {
+      portraitHtml = `<div class="fallback">${escHtml(personaInitials(p))}</div>`;
+    }
   }
   const mutedClass = p.muted ? ' muted' : '';
   const muteGlyph  = p.muted ? '<div class="standee-glyph mute">&#128263;</div>' : '';
