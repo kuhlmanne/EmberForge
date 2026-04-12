@@ -496,16 +496,19 @@ class StudioHandler(BaseHTTPRequestHandler):
         # below works consistently.
         if "?" in self.path:
             self.path = self.path.split("?", 1)[0]
-        if self.path == "/" or self.path == "/studio":
+        if self.path == "/" or self.path == "/studio" or self.path == "/game":
+            # EMBER FORGE PUBLIC: always inject data-mode="forge" to hide
+            # Room/Claude/All tabs. This is the GAME, not the studio.
             if os.path.exists(STUDIO_HTML_PATH):
                 with open(STUDIO_HTML_PATH, encoding="utf-8") as f:
                     html = f.read()
+                html = html.replace("<body>", '<body data-mode="forge">', 1)
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(html.encode())
             else:
-                self.send_error(404, "Studio HTML not found")
+                self.send_error(404, "Game HTML not found")
 
         elif self.path == "/forge":
             # Standalone Ember Forge landing page — synopsis + download.

@@ -9593,6 +9593,13 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// Auto-switch to Games tab in forge mode (standalone game)
+if (document.body.dataset.mode === 'forge') {
+  setTimeout(() => {
+    if (typeof switchTab === 'function') switchTab('games');
+  }, 100);
+}
+
 connect();
 </script>
 </body>
