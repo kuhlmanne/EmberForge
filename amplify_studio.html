@@ -9962,7 +9962,11 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-connect();
+// Only open SSE connection in studio mode — forge mode doesn't need it
+// (SSE connects to wingman which may not exist for standalone players)
+if (document.body.dataset.mode !== 'forge') {
+  connect();
+}
 </script>
 </body>
 </html>

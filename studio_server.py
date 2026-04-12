@@ -699,7 +699,8 @@ class StudioHandler(BaseHTTPRequestHandler):
             data = {"ok": False, "personas": [], "pairs": {}, "presence": {}}
             try:
                 if _PERSONA_OK:
-                    _persona_registry.load()  # pick up any file edits
+                    # Don't reload on every /party/state — only use cached.
+                    # Reload happens on slot change + forge generation.
                     _all = _persona_registry.all_personas()
                     # Filter by active slot's arrival history if a slot
                     # is loaded. New game slots only show arrived personas.
