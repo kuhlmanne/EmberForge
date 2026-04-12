@@ -8944,6 +8944,9 @@ async function _forgeComplete() {
   container.innerHTML = '';
   await new Promise(res => setTimeout(res, 3000));
 
+  // Save immediately — don't wait for "Sit by the fire" click
+  _forgeBeginSave(persona.id);
+
   _playUISound('session_start');
   container.innerHTML = `
     <div class="forge-arrival forge-reveal">
@@ -8980,8 +8983,8 @@ async function _forgeComplete() {
   }, 2000);
 }
 
-async function _forgeEnter(starterId) {
-  // Tell the server to record the first arrival and save immediately
+async function _forgeBeginSave(starterId) {
+  // Save the ember + progression immediately (don't wait for UI click)
   try {
     const profile = _getPlayerProfile();
     await fetch(authUrl('/forge/begin'), {
@@ -8990,11 +8993,14 @@ async function _forgeEnter(starterId) {
       body: JSON.stringify({
         starter_id: starterId,
         answers: _forgeAnswers,
-        player_name: profile.player_name || 'Traveler',
+        player_name: profile.player_name || _forgeAnswers.player_name || 'Traveler',
         birthday: profile.birthday || _forgeAnswers.birthday || '',
       }),
     });
-  } catch (e) { console.warn('[forge] begin failed:', e); }
+  } catch (e) { console.warn('[forge] begin save failed:', e); }
+}
+
+async function _forgeEnter(starterId) {
 
   // Unmute ambient chatter now that the forge is done
   fetch(authUrl('/party/mute'), {
