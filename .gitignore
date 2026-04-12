@@ -1,0 +1,37 @@
+# Player state (never commit)
+.env
+.persona_stress.json
+.persona_mementos.json
+.sessions.json
+.game_progression.json
+.void_crystals.json
+.persona_skills.json
+.forge_answers.json
+.save_dir.json
+.party_muted.json
+.persona_interactions.json
+.saves/
+.llm_config.json
+
+# Build artifacts
+dist/
+build_temp/
+__pycache__/
+*.pyc
+*.spec
+
+# Generated personas (player-specific)
+personas/forged_*
+personas/mira_*
+personas/cal_*
+personas/vela_*
+personas/maren_*
+
+# Logs
+*.log
+*.log.*
+*.pid
+
+# OS
+.DS_Store
+Thumbs.db

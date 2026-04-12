@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+<title>Ember Forge</title>
+<style>
+:root {
+  --bg: #0a090e;
+  --gold: #d4a554;
+  --gold-light: #f0d890;
+  --ember: #e8945a;
+  --parchment: #e8dcc8;
+  --crystal: #8ab0e8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--parchment);
+  font-family: 'Georgia', serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px 80px;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 50% 30%, rgba(60, 40, 20, 0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 35% at 50% 80%, rgba(212, 165, 84, 0.06) 0%, transparent 60%);
+}
+
+.hero {
+  text-align: center;
+  max-width: 720px;
+  margin-bottom: 60px;
+}
+.wordmark {
+  font-family: 'Cinzel Decorative', 'Cinzel', serif;
+  font-size: clamp(36px, 7vw, 72px);
+  color: var(--gold-light);
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 60px rgba(212, 165, 84, 0.3);
+  margin-bottom: 12px;
+}
+.tagline {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(11px, 1.6vw, 15px);
+  letter-spacing: 0.35em;
+  color: rgba(212, 180, 120, 0.5);
+  text-transform: uppercase;
+  margin-bottom: 48px;
+}
+.synopsis {
+  font-size: clamp(16px, 2.2vw, 20px);
+  line-height: 1.8;
+  color: rgba(232, 220, 200, 0.82);
+  max-width: 600px;
+  margin: 0 auto 48px;
+}
+.synopsis strong { color: var(--gold-light); }
+
+.download-section {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 48px;
+}
+.dl-btn {
+  padding: 16px 36px;
+  background: transparent;
+  border: 1px solid rgba(212, 165, 84, 0.4);
+  color: var(--gold-light);
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  border-radius: 3px;
+}
+.dl-btn:hover {
+  background: rgba(212, 165, 84, 0.1);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(212, 165, 84, 0.15);
+}
+.dl-btn.primary {
+  background: rgba(212, 165, 84, 0.12);
+  border-color: var(--gold);
+}
+.dl-btn small {
+  display: block;
+  font-family: 'Georgia', serif;
+  font-size: 10px;
+  color: rgba(200, 180, 140, 0.5);
+  margin-top: 6px;
+  letter-spacing: 0.05em;
+}
+
+.features {
+  max-width: 700px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 60px;
+}
+@media (max-width: 600px) { .features { grid-template-columns: 1fr; } }
+.feature {
+  padding: 20px;
+  background: rgba(20, 16, 28, 0.6);
+  border: 1px solid rgba(212, 165, 84, 0.15);
+  border-radius: 4px;
+}
+.feature .f-icon { font-size: 20px; margin-bottom: 8px; }
+.feature .f-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  color: var(--gold-light);
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.feature .f-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(200, 180, 140, 0.65);
+}
+
+.requirements {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(200, 180, 140, 0.35);
+  line-height: 1.8;
+  max-width: 500px;
+}
+.requirements a { color: var(--crystal); text-decoration: none; }
+
+.ember-drift {
+  max-width: 700px;
+  margin-top: 60px;
+  padding: 28px;
+  background: rgba(20, 16, 28, 0.5);
+  border: 1px solid rgba(232, 148, 90, 0.2);
+  border-radius: 4px;
+  text-align: center;
+}
+.ember-drift .ed-title {
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  color: var(--ember);
+  margin-bottom: 8px;
+}
+.ember-drift .ed-desc {
+  font-size: 14px;
+  color: rgba(200, 180, 140, 0.5);
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wordmark">EMBER FORGE</div>
+  <div class="tagline">every voice carries weight</div>
+
+  <div class="synopsis">
+    The forge reads you. It asks questions with no right answer.
+    From your answers it shapes a companion who never existed before.
+    Together you sit by a fire that wasn't burning until you arrived.<br><br>
+    Build a party. Lead them through dice-driven encounters.
+    Forge mementos from shared moments. Watch the world get harder.
+    Lose people. Find new ones.<br><br>
+    <strong>This is not a game you win. This is a game that remembers.</strong>
+  </div>
+
+  <div class="download-section">
+    <a href="/download/setup" class="dl-btn primary" download="EmberForge_Setup.bat">
+      Download for Windows
+      <small>One-click setup &middot; No Python needed &middot; 2 KB</small>
+    </a>
+    <a href="/install" class="dl-btn" download="install_emberforge.py">
+      Mac / Linux / Deck
+      <small>Python installer script</small>
+    </a>
+    <a href="https://github.com/kuhlmanne/WIngman" class="dl-btn" target="_blank" style="opacity:0.5">
+      GitHub
+      <small>Source code</small>
+    </a>
+  </div>
+</div>
+
+<div class="features">
+  <div class="feature">
+    <div class="f-icon">&#x1F399;</div>
+    <div class="f-title">Voice Companions</div>
+    <div class="f-desc">Talk to your party by voice. They respond in character, shaped by stress and shared memories.</div>
+  </div>
+  <div class="feature">
+    <div class="f-icon">&#x1F3B2;</div>
+    <div class="f-title">Hidden Dice</div>
+    <div class="f-desc">d20 rolls determine outcomes. The Keeper writes prose constrained by the dice. Failures are real.</div>
+  </div>
+  <div class="feature">
+    <div class="f-icon">&#x1F48E;</div>
+    <div class="f-title">Mementos with Lifespans</div>
+    <div class="f-desc">Every shared moment becomes an item with a sidequest. Honor it or watch it fade. Memories are mortal.</div>
+  </div>
+  <div class="feature">
+    <div class="f-icon">&#x1F525;</div>
+    <div class="f-title">The Losing Battle</div>
+    <div class="f-desc">The world gets harder the longer you rest. Every choice costs something. Smart play survives.</div>
+  </div>
+  <div class="feature">
+    <div class="f-icon">&#x2728;</div>
+    <div class="f-title">Unique Every Run</div>
+    <div class="f-desc">The forge generates companions from your answers. Different questions, different people, every time.</div>
+  </div>
+  <div class="feature">
+    <div class="f-icon">&#x1F3B5;</div>
+    <div class="f-title">Living Soundscape</div>
+    <div class="f-desc">Procedural ambient audio shifts with stress and world pressure. The game sounds like how it feels.</div>
+  </div>
+</div>
+
+<div class="requirements">
+  Runs on your machine. Your API key. Your saves. Your stories.<br>
+  Requires an <a href="https://console.anthropic.com" target="_blank">Anthropic API key</a> (Claude powers the narrative).<br>
+  ElevenLabs optional for character voices. Steam Deck compatible.<br>
+  Cloud saves via OneDrive / Dropbox / Google Drive.
+</div>
+
+<div class="ember-drift">
+  <div class="ed-title">&#x1F525; Ember Drift</div>
+  <div class="ed-desc">A quieter fire. No dice. No stress. Just the voices around the campfire.<br>Coming soon.</div>
+</div>
+
+</body>
+</html>
