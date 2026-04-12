@@ -7732,7 +7732,7 @@ async function _autoAdvance() {
       // beat together with the next-turn signal, so a persona beat that
       // precedes a player turn arrives in the same response as
       // waiting_for_player=true. Must paint it first or it vanishes.
-      if (data.who && data.narration && data.who !== 'player') {
+      if (data.who && data.narration && data.who !== 'player' && !data.ended) {
         _appendBeat({who: data.who, text: data.narration, outcome: data.outcome});
         _playOutcomeChime(data.outcome);
         _speakKeeper(data.narration);

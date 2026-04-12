@@ -1894,11 +1894,18 @@ class StudioHandler(BaseHTTPRequestHandler):
                         else:
                             vid = None
                         if not vid:
-                            # Check the persona JSON directly
-                            ppath = os.path.join(WINGMAN_DIR, "personas", f"{pid}.json")
-                            if os.path.exists(ppath):
-                                with open(ppath, "r", encoding="utf-8") as _pf:
-                                    vid = json.load(_pf).get("voice", {}).get("voice_id")
+                            # Check the persona JSON directly — look in slot dir first
+                            _search_dirs = []
+                            try:
+                                _search_dirs.append(str(persona_registry.PERSONAS_DIR))
+                            except Exception: pass
+                            _search_dirs.append(os.path.join(WINGMAN_DIR, "personas"))
+                            for _pdir in _search_dirs:
+                                ppath = os.path.join(_pdir, f"{pid}.json")
+                                if os.path.exists(ppath):
+                                    with open(ppath, "r", encoding="utf-8") as _pf:
+                                        vid = json.load(_pf).get("voice", {}).get("voice_id")
+                                    if vid: break
                         if vid:
                             import base64
                             audio = voice_forge.speak_with_voice(result["text"], vid)
