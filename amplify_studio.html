@@ -30,16 +30,26 @@
   --ink: #2a2435;
 }
 /* Forge-only mode: hide non-game tabs for standalone players */
-body[data-mode="forge"] .tab-room,
-body[data-mode="forge"] .tab-claude,
-body[data-mode="forge"] .tab-all,
+/* Forge mode: hide ALL studio chrome. No tabs. No header status.
+   The game IS the page. */
+body[data-mode="forge"] .tabs,
+body[data-mode="forge"] .status-row,
 body[data-mode="forge"] #panel-room,
 body[data-mode="forge"] #panel-claude,
-body[data-mode="forge"] #panel-all,
-body[data-mode="forge"] #sh-dot,
-body[data-mode="forge"] #sh-lbl,
-body[data-mode="forge"] #cl-dot,
-body[data-mode="forge"] #cl-lbl { display: none !important; }
+body[data-mode="forge"] #panel-all { display: none !important; }
+body[data-mode="forge"] header {
+  justify-content: center;
+  padding: 6px 18px;
+}
+body[data-mode="forge"] .logo {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+}
+/* In forge mode, Camp + Games panels are always visible as the full UI */
+body[data-mode="forge"] #panel-camp,
+body[data-mode="forge"] #panel-games { display: block; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
