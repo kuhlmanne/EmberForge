@@ -1992,6 +1992,28 @@ class StudioHandler(BaseHTTPRequestHandler):
                 persona.setdefault("display_name", "A Stranger")
                 persona.setdefault("essence", "Someone the forge shaped from your answers.")
                 persona.setdefault("status", "camp")
+                # Validate affinity_tags against the known set
+                _VALID_TAGS = {"stealth","empathic","cautious","observant","combat","direct",
+                    "dominance","decisive","analytical","technical","perceptive","curious",
+                    "diplomatic","rhetorical","strategic","psionic","commanding","survivor","balanced"}
+                raw_tags = persona.get("affinity_tags") or []
+                valid_tags = [t for t in raw_tags if t in _VALID_TAGS]
+                if len(valid_tags) < 4:
+                    # Map unknown tags to closest matches
+                    _TAG_MAP = {"water":"cautious","depth":"perceptive","ocean":"observant",
+                        "memory":"empathic","time":"analytical","light":"curious",
+                        "nature":"observant","shadow":"stealth","force":"combat",
+                        "mind":"analytical","spirit":"psionic","word":"rhetorical"}
+                    for t in raw_tags:
+                        if t not in _VALID_TAGS and len(valid_tags) < 4:
+                            mapped = _TAG_MAP.get(t.split()[0] if ' ' in t else t, "balanced")
+                            if mapped not in valid_tags:
+                                valid_tags.append(mapped)
+                    while len(valid_tags) < 4:
+                        for fallback in ["observant","curious","cautious","balanced"]:
+                            if fallback not in valid_tags:
+                                valid_tags.append(fallback); break
+                persona["affinity_tags"] = valid_tags[:4]
                 persona.setdefault("archetype", "wanderer")
                 persona.setdefault("voice", {"engine": "edge_tts", "sample": "", "style_hint": "warm"})
                 persona.setdefault("wake_aliases", [persona.get("display_name", "").split()[0].lower()])

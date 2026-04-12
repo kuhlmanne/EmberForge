@@ -55,6 +55,20 @@ def _load_config() -> dict:
             except Exception:
                 pass
             break
+    # Try game_settings.json
+    try:
+        import game_settings
+        gs = game_settings.load()
+        if gs.get("anthropic_api_key") and not cfg.get("api_key"):
+            cfg["api_key"] = gs["anthropic_api_key"]
+        if gs.get("llm_provider"):
+            cfg["provider"] = gs["llm_provider"]
+        if gs.get("llm_model_keeper"):
+            cfg["model_keeper"] = gs["llm_model_keeper"]
+        if gs.get("llm_model_forge"):
+            cfg["model_forge"] = gs["llm_model_forge"]
+    except Exception:
+        pass
     # Fallback: API key from environment
     if not cfg.get("api_key"):
         cfg["api_key"] = os.environ.get("ANTHROPIC_API_KEY", "")

@@ -30,14 +30,20 @@ def _voice_description_from_persona(persona: dict) -> dict:
     archetype = (persona.get("archetype") or "wanderer").lower()
     tags = persona.get("affinity_tags") or []
 
-    # Gender heuristic from the name/essence (imperfect but functional)
-    female_hints = ["she", "her", "woman", "girl", "mother", "sister", "queen", "witch", "priestess"]
-    male_hints = ["he", "him", "man", "boy", "father", "brother", "king", "warrior"]
-    name = (persona.get("display_name") or "").lower()
-
-    is_female = any(h in essence for h in female_hints) or any(h in name for h in ["a", "e", "i"])
-    is_male = any(h in essence for h in male_hints)
-    gender = "female" if (is_female and not is_male) else "male" if is_male else "female"
+    # Gender detection from essence text (check for pronoun usage)
+    # Split into words to avoid substring matches ("he" in "the")
+    words = set(essence.split())
+    female_pronouns = {"she", "her", "herself", "woman", "girl", "mother", "sister", "queen", "priestess", "goddess"}
+    male_pronouns = {"he", "him", "himself", "man", "boy", "father", "brother", "king", "warrior"}
+    female_score = len(words & female_pronouns)
+    male_score = len(words & male_pronouns)
+    if female_score > male_score:
+        gender = "female"
+    elif male_score > female_score:
+        gender = "male"
+    else:
+        # No clear signal — default female (slightly more diverse voice pool)
+        gender = "female"
 
     # Age from archetype
     old_archetypes = {"scholar", "sage", "elder", "keeper", "guardian", "mystic"}
