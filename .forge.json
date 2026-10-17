@@ -1,0 +1,21 @@
+{
+  "name": "ember-forge",
+  "display_name": "Ember Forge",
+  "path": "C:\\Users\\kuhlm\\Projects\\EmberForge",
+  "description": "Persona/narrative studio. Camp skills, persona sheets, reward cards, memento forge, session forge. A self-shaping creative space \u2014 the studio that shapes Eric. Contrast with The Forge which shapes tools.",
+  "tags": {
+    "mode": ["wonder", "reflect"],
+    "domain": ["self"],
+    "energy": ["generative"],
+    "status": "active",
+    "collaborator": ["solo-claude"]
+  },
+  "claude_project_id": null,
+  "entry_points": {
+    "read_first": ["README.md"],
+    "start_cmd": "forge.bat (or python start.py)",
+    "stop_cmd": ""
+  },
+  "related": ["ember-drift", "ember-forge-proto", "wingman"],
+  "notes": "Authoritative Ember Forge. Not to be confused with The Forge (_forge/) or ember-forge/ (prototype). Contains persona_registry, session_forge, memento_forge, interaction_store. Uses llm_router for model selection."
+}
